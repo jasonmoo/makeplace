@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>makeplace</title>
+		<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Open+Sans:400,700">
+		<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+		<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+	</head>
+	<body>
+</head>
+<style>
+	* { margin:0; padding:0; }
+	html { background-color:#aaa; }
+	body {
+		height:800px;
+		font:14px "Open Sans";
+		background-image: -webkit-linear-gradient(bottom, #aaa 24%, #999 62%);
+	}
+	header {
+		float:right;
+		background: #cde;
+		text-align: right;
+		display: inline-block;
+	}
+	header a {
+		text-decoration: none;
+		padding:10px;
+		color:inherit;
+		display: inline-block;
+		cursor:pointer;
+	}
+	.node {
+		cursor:move;
+		border-radius: 10px;
+		padding:40px;
+		border:2px solid #ccc;
+		background-color:#eee;
+		display: inline-block;
+		position: absolute;
+	}
+	.node .node {
+		border:1px solid #ddd;
+		background-color:#ccc;
+	}
+	.node .node .node {
+		border:1px solid #eee;
+		background-color:#aaa;
+	}
+</style>
+<body>
+<header><a>make place &#9660;</a></header>
+<nav></nav>
+<div id="place"></div>
+<script>
+
+	catalog = {};
+
+	function node(name, data) {
+
+		var id = hash(JSON.stringify(data));
+
+		if (id in catalog) {
+			return catalog[id];
+		}
+
+		this.id = id;
+		this.name = name || JSON.stringify(data).substr(0,15);
+		this.data = data;
+		this.children = [];
+
+		catalog[id] = this;
+
+	}
+
+	node.prototype.add_children = function() {
+		this.children.push.apply(this.children, arguments);
+	};
+	node.prototype.remove_children = function() {
+		this.children = this.children.filter(function(child) { return arguments.indexOf(child) < 0 });
+	};
+	node.prototype.clone = function() {
+		return JSON.parse(JSON.stringify(this));
+	};
+
+	// searches recursively through the tree
+	node.prototype.find = function(regex) {
+
+		var result = {
+			node: this,
+			children: [],
+			matches: JSON.stringify([this.data,this.id]).match(regex)
+		};
+
+		this.children.forEach(function(n) {
+			result.children.push(n.find(regex))
+		});
+
+		return result;
+
+	};
+
+
+	// modified cjb2a produces 2 unique hashes from a single pass
+	// for values of any length.  hashing starts from 0 and 1 positions.
+	// ie. hashing 11 bytes:  first hash (0-9), second hash (1-10)
+	function hash(str) {
+		// random seed
+		str += "EiqmfF8Kvnp/sMYMG+F2xjepTEErl8+TcVTrUjyL/";
+
+		var h = 5381, hh = h,
+			i = 0, len = str.length-1;
+
+		while (i < len) {
+			h = ((h << 5) + h) + str.charCodeAt(i++);
+			hh = ((hh << 5) + hh) + str.charCodeAt(i);
+		}
+
+		return Math.abs(h).toString(36)+Math.abs(hh).toString(36);
+	}
+
+
+	// node.prototype.save = function() {
+
+	// 	// write to dropbox data dir
+	// 	window.requestFileSystem(window.TEMPORARY, 5*1024*1024, function(fs) {
+
+	// 		fs.root.getFile("data/"+this.id, {create: true}, function(file) {
+
+	// 			file.createWriter(function(writer) {
+
+	// 				writer.onwriteend = writer.onerror = console.log.bind(console);
+
+	// 				writer.write(new Blob([atob(this.stringify())]));
+
+	// 			});
+
+	// 		});
+
+	// 	});
+
+	// };
+
+</script>
+
+<script>
+
+	document.querySelector("header a").addEventListener("click", function(e) {
+
+		e.preventDefault();
+
+		var something = prompt("seriously.  dooo it.", "paste something here");
+
+		$('<div />')
+			.addClass("node")
+			.text(something)
+			.attr("record", new node(something, something))
+			.on({
+				mousedown: function(e) {
+					origin = e.target;
+					console.log("mousedown", e);
+					$(".node").css("z-index", 0);
+					$(e.target).css("z-index", 10);
+				},
+				mouseup: function(e) {
+					var record = $(e.toElement).not(origin).attr("record");
+					if (record) {
+						record.add_children(this);
+					}
+					console.log("mouseup", e);
+
+				}
+			})
+			.draggable()
+			.appendTo("#place");
+
+	});
+
+	var origin;
+
+
+	// var a = new node('jason');
+
+	// a.add_children(new node('more'));
+
+	// var n = document.createElement('div');
+
+	// document.body.main.appendChild(n);
+
+</script>
+
+</body>
+</html>
